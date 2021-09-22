@@ -1,6 +1,7 @@
-data "alicloud_zones" "default" {
-  available_instance_type = "ecs.t6-c1m2.large"
-  available_disk_category = "cloud_ssd"
+resource "random_password" "password" {
+  length           = 16
+  special          = true
+  override_special = "_%@"
 }
 
 resource "alicloud_vpc" "default" {
@@ -22,4 +23,36 @@ resource "alicloud_vswitch" "private" {
   cidr_block        = "${cidrsubnet(var.cidr, 8, count.index + 2)}"
   zone_id           = "${lookup(data.alicloud_zones.default.zones[count.index], "id")}"
   count             = "${var.az_count}"
+}
+
+resource "alicloud_security_group" "web" {
+  name   = "${var.name}_web_sg"
+  vpc_id = "${alicloud_vpc.default.id}"
+}
+
+resource "alicloud_security_group" "ssh" {
+  name   = "${var.name}_ssh_sg"
+  vpc_id = "${alicloud_vpc.default.id}"
+}
+
+resource "alicloud_security_group_rule" "allow_http_access" {
+  type              = "ingress"
+  ip_protocol       = "tcp"
+  nic_type          = "intranet"
+  policy            = "accept"
+  port_range        = "80/80"
+  priority          = 1
+  security_group_id = "${alicloud_security_group.web.id}"
+  cidr_ip           = "0.0.0.0/0"
+}
+
+resource "alicloud_security_group_rule" "allow_ssh_access" {
+  type              = "ingress"
+  ip_protocol       = "tcp"
+  nic_type          = "intranet"
+  policy            = "accept"
+  port_range        = "22/22"
+  priority          = 1
+  security_group_id = "${alicloud_security_group.ssh.id}"
+  cidr_ip           = "0.0.0.0/0"
 }
