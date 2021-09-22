@@ -1,6 +1,6 @@
 variable "name" {
   description = "Solution Name"
-  default = "wp_app"
+  default = "agence_domotique"
 }
 
 variable "cidr" {
@@ -33,6 +33,33 @@ variable "rds_type" {
   default = "mysql.n2.medium.25"
 }
 
+
+variable "wp_db_name" {
+  description = "Wordpress database name"
+  default = "wp_agency"
+}
+
+variable "wp_db_user" {
+  description = "Wordpress database user"
+  default = "wp_agency"
+}
+
+variable "wp_admin_user" {
+  description = "Wordpress admin user"
+  default = "wp_agency"
+}
+variable "wp_admin_email" {
+  description = "Wordpress admin email"
+  default = "wp_agency@gmail.com"
+}
+variable "wp_url" {
+  description = "Wordpress url"
+  default = "http://wp_agency.com"
+}
+variable "wp_site_title" {
+  description = "Wordpress site title"
+  default = "WP Agency"
+}
 variable "ssh_password" {
-  description = "Ssh password for the VMs"
+  description = "Password for ssh VM"
 }

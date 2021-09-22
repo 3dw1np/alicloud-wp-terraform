@@ -3,6 +3,17 @@ data "alicloud_zones" "default" {
   available_disk_category = "cloud_ssd"
 }
 
+resource "alicloud_eip" "default" {
+  bandwidth = "5"
+  count     = "${var.vm_count}"
+}
+
+resource "alicloud_eip_association" "default" {
+  allocation_id = "${element(alicloud_eip.default.*.id, count.index)}"
+  instance_id   = "${element(alicloud_instance.web.*.id, count.index)}"
+  count         = "${var.vm_count}"
+}
+
 resource "alicloud_instance" "web" {
   instance_name              = "${var.name}_web_srv_${count.index}"
   instance_type              = "${var.ecs_type}"
@@ -14,9 +25,21 @@ resource "alicloud_instance" "web" {
   vswitch_id                 = "${element(alicloud_vswitch.public.*.id, count.index)}"
   internet_max_bandwidth_out = 0 // Not allocate public IP for VPC instance
 
-  security_groups            = ["${alicloud_security_group.web.id}", "${alicloud_security_group.ssh.id}"]
-  # user_data                  = "${element(data.template_file.user_data.*.rendered, count.index)}"
+  security_groups            = ["${alicloud_security_group.http.id}", "${alicloud_security_group.https.id}", "${alicloud_security_group.ssh.id}"]
   password                   = "${var.ssh_password}"
+
+  user_data = templatefile("${path.module}/tpl/setup.sh", {
+    WORDPRESS_DB_HOSTNAME     = "${alicloud_db_instance.default.connection_string}"
+    WORDPRESS_DB_NAME        = "${var.wp_db_name}"
+    WORDPRESS_DB_USER        = "${var.wp_db_user}"
+    WORDPRESS_DB_PASSWORD    = "${random_password.db_password.result}"
+    WORDPRESS_ADMIN_USER     = "${var.wp_admin_user}"
+    WORDPRESS_ADMIN_PASSWORD = "${random_password.wp_password.result}"
+    WORDPRESS_ADMIN_EMAIL    = "${var.wp_admin_email}"
+    WORDPRESS_URL            = "${var.wp_url}"
+    WORDPRESS_SITE_TITLE     = "${var.wp_site_title}"
+    LETS_ENCRYPT_STAGING     = ""
+  })
 
   depends_on                 = [alicloud_db_instance.default, alicloud_db_account.account]
 }
@@ -35,5 +58,5 @@ resource "alicloud_db_instance" "default" {
 resource "alicloud_db_account" "account" {
   db_instance_id   = "${alicloud_db_instance.default.id}"
   account_name     = "wp_agency"
-  account_password = random_password.password.result
+  account_password = random_password.db_password.result
 }
