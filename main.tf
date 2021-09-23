@@ -4,7 +4,8 @@ data "alicloud_zones" "default" {
 }
 
 resource "alicloud_eip" "default" {
-  bandwidth = "5"
+  bandwidth            = "10"
+  internet_charge_type = "PayByBandwidth"
   count     = "${var.vm_count}"
 }
 
@@ -52,11 +53,23 @@ resource "alicloud_db_instance" "default" {
     instance_storage      = "10"
 
     vswitch_id            = "${element(alicloud_vswitch.private.*.id, 0)}"
-    security_ips          = ["192.168.1.0/24", "192.168.2.0/24"]
+    security_ips          = ["${var.cidr}"]
 }
 
 resource "alicloud_db_account" "account" {
   db_instance_id   = "${alicloud_db_instance.default.id}"
-  account_name     = "wp_agency"
+  account_name     = "${var.wp_db_user}"
   account_password = random_password.db_password.result
+}
+
+resource "alicloud_db_database" "default" {
+  instance_id = "${alicloud_db_instance.default.id}"
+  name        = "${var.wp_db_name}"
+}
+
+resource "alicloud_db_account_privilege" "privilege" {
+  instance_id  = "${alicloud_db_instance.default.id}"
+  account_name = "${var.wp_db_user}"
+  privilege    = "ReadWrite"
+  db_names     = ["${var.wp_db_name}"]
 }
